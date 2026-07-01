@@ -19,46 +19,59 @@ class PaymentController extends Controller
 
         $order = Order::findOrFail($request->order_id);
 
-        // Stripe PHP SDK call (sandbox)
-        \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+        $stripeSecret = env('STRIPE_SECRET');
 
-        $intent = \Stripe\PaymentIntent::create([
-            'amount'   => (int)($order->total * 100), // centimes
-            'currency' => 'mad', // Dirham Marocain
-            'metadata' => [
-                'order_id'     => $order->id,
-                'order_number' => $order->order_number,
-            ],
-        ]);
+        if (!$stripeSecret) {
+            return response()->json(['message' => 'Clé Stripe non configurée. Configurez STRIPE_SECRET dans les variables d\'environnement.'], 500);
+        }
 
-        return response()->json([
-            'client_secret' => $intent->client_secret,
-            'amount'        => $order->total,
-            'order_number'  => $order->order_number,
-        ]);
+        try {
+            \Stripe\Stripe::setApiKey($stripeSecret);
+
+            $intent = \Stripe\PaymentIntent::create([
+                'amount'   => (int)($order->total * 100),
+                'currency' => 'mad',
+                'metadata' => [
+                    'order_id'     => $order->id,
+                    'order_number' => $order->order_number,
+                ],
+            ]);
+
+            return response()->json([
+                'client_secret' => $intent->client_secret,
+                'amount'        => $order->total,
+                'order_number'  => $order->order_number,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erreur Stripe: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
-     * Confirm a payment after Stripe confirms it
+     * Confirm a payment
      */
     public function confirm(Request $request)
     {
         $request->validate([
             'order_id'          => 'required|exists:orders,id',
-            'payment_intent_id' => 'required|string',
+            'payment_intent_id' => 'nullable|string',
+            'method'            => 'nullable|in:card,cash,transfer',
         ]);
 
         $order = Order::findOrFail($request->order_id);
 
         Payment::create([
             'order_id'          => $order->id,
-            'payment_intent_id' => $request->payment_intent_id,
+            'payment_intent_id' => $request->payment_intent_id ?? 'manual_' . time(),
             'amount'            => $order->total,
-            'method'            => $request->method ?? 'card',
+            'method'            => $request->method ?? 'cash',
             'status'            => 'completed',
         ]);
 
-        $order->update(['payment_status' => 'paid', 'status' => 'confirmed']);
+        $order->update([
+            'payment_status' => 'paid',
+            'status'         => 'confirmed',
+        ]);
 
         return response()->json([
             'message' => 'Paiement confirmé avec succès',
