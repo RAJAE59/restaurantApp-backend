@@ -35,6 +35,19 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(\App\Models\User::select('id','name','email','role','created_at')->get());
     });
 
+    Route::put('/users/{id}',    function(\Illuminate\Http\Request $req, $id) {
+        $user = \App\Models\User::findOrFail($id);
+        $user->update($req->only('name', 'email', 'role'));
+        if ($req->filled('password')) {
+            $user->update(['password' => \Illuminate\Support\Facades\Hash::make($req->password)]);
+        }
+        return response()->json($user);
+    });
+    Route::delete('/users/{id}', function($id) {
+        \App\Models\User::findOrFail($id)->delete();
+        return response()->json(['message' => 'Supprimé']);
+    });
+
     // Dashboard
     Route::get('/dashboard/stats',         [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue-chart', [DashboardController::class, 'revenueChart']);
