@@ -11,19 +11,19 @@ use Illuminate\Support\Facades\DB;  // ← Cette ligne doit être présente
 
 class OrderController extends Controller
 {
-  public function index(Request $request)
+public function index(Request $request)
 {
-    $orders = DB::select('SELECT o.*, c.name as customer_name 
-        FROM orders o 
-        LEFT JOIN customers c ON o.customer_id = c.id 
-        ORDER BY o.created_at DESC');
-    
-    return response()->json([
-        'data' => $orders,
-        'total' => count($orders),
-        'current_page' => 1,
-        'last_page' => 1,
-    ]);
+    $query = Order::with(['customer', 'items.dish']);
+
+    if ($request->has('status') && $request->status !== '')
+        $query->where('status', $request->status);
+
+    if ($request->has('search') && $request->search !== '')
+        $query->whereHas('customer', fn($q) =>
+            $q->where('name', 'like', '%' . $request->search . '%'));
+
+    $orders = $query->orderByDesc('created_at')->paginate(15);
+    return response()->json($orders);
 }
 
     public function store(Request $request)
