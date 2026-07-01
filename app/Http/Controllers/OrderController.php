@@ -13,16 +13,10 @@ class OrderController extends Controller
 {
 public function index(Request $request)
 {
-    $query = Order::with(['customer', 'items.dish']);
-
-    if ($request->has('status') && $request->status !== '')
-        $query->where('status', $request->status);
-
-    if ($request->has('search') && $request->search !== '')
-        $query->whereHas('customer', fn($q) =>
-            $q->where('name', 'like', '%' . $request->search . '%'));
-
-    $orders = $query->orderByDesc('created_at')->paginate(15);
+    $orders = \App\Models\Order::with(['customer', 'items.dish'])
+        ->orderByDesc('created_at')
+        ->paginate(15);
+    
     return response()->json($orders);
 }
 
