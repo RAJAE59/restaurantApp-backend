@@ -25,7 +25,7 @@ public function index(Request $request)
         $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'table_number'=> 'nullable|integer',
-            'type'        => 'required|in:dine_in,takeaway,delivery',
+            'type'        => 'required|in:Sur place,A emporter,Livraison',
             'items'       => 'required|array|min:1',
             'items.*.dish_id'  => 'required|exists:dishes,id',
             'items.*.quantity' => 'required|integer|min:1',
