@@ -37,8 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout',      [AuthController::class, 'logout']);
     Route::get('/me',           [AuthController::class, 'me']);
     Route::put('/me',           [AuthController::class, 'updateProfile']);
-    Route::get('/users', function() {
-    return response()->json(\App\Models\User::all());
+    Route::get('/users', function () {
+    return response()->json(\App\Models\User::select('id','name','email','role','created_at')->get());
 });
 
     // Dashboard
